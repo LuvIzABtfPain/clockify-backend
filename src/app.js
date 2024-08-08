@@ -15,7 +15,7 @@ app.get('/get-api-key-by-user-id/:userID', (req, res) => {
         if(err) {
             res.json(err)
         } else {
-            res.json({ hasApiKey: results.length > 0 });
+            res.json({ hasApiKey: results.length > 0, apikey: results[0] ? results[0].apikey : null });
         }
     });
 });
