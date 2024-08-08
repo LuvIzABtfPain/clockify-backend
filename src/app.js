@@ -27,11 +27,11 @@ app.post('/save-api-key', (req, res) => {
         VALUES (?, ?)
         ON DUPLICATE KEY UPDATE apikey = VALUES(apikey)
     `;
-    db.query(query, [userID, apiKey], (err) => {
+    db.query(query, [userID, apiKey], (err, results) => {
         if (err) {
             res.json(err);
         } else {
-            res.redirect(`http://localhost:3000/apikey=${apiKey}`);
+            res.json({ hasApiKey: true, 'apikey': apiKey });
         }
     });
 });
