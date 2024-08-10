@@ -5,6 +5,7 @@ const bodyParser = require('body-parser');
 const db = require('./db');
 const cors = require('cors');
 const app = express();
+const axios = require('axios');
 
 app.use(bodyParser.json());
 app.use(cors());
@@ -20,20 +21,30 @@ app.get('/get-api-key-by-user-id/:userID', (req, res) => {
     });
 });
 
-app.post('/save-api-key', (req, res) => {
+app.post('/save-api-key', async (req, res) => {
     const { userID, apiKey } = req.body;
-    const query = `
-        INSERT INTO oncademy_apikey (userID, apikey)
-        VALUES (?, ?)
-        ON DUPLICATE KEY UPDATE apikey = VALUES(apikey)
-    `;
-    db.query(query, [userID, apiKey], (err, results) => {
-        if (err) {
-            res.json(err);
-        } else {
-            res.json({ hasApiKey: true, 'apikey': apiKey });
-        }
-    });
+    // get user ID by https://api.clockify.me/api/v1/user with header x-api-key = apiKey
+    try {
+        const response = await axios.get('https://api.clockify.me/api/v1/user', {
+            headers: { 'x-api-key': apiKey }
+        });
+
+        const { email, name, id } = response.data;
+        const query = `
+            INSERT INTO oncademy_apikey (userID, apikey, email, name, clockifyUID)
+            VALUES (?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE apikey = VALUES(apikey), email = VALUES(email), name = VALUES(name), clockifyUID = VALUES(clockifyUID)
+        `;
+        db.query(query, [userID, apiKey, email, name, id], (err, results) => {
+            if (err) {
+                res.json(err);
+            } else {
+                res.json({ hasApiKey: true, 'apikey': apiKey });
+            }
+        });
+    } catch (e) {
+        res.json({error: 'Failed to fetch user details from Clockify API', details: e.message})
+    }
 });
 
 const PORT = process.env.PORT || 5000;
