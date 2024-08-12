@@ -46,7 +46,29 @@ app.post('/save-api-key', async (req, res) => {
         res.json({error: 'Failed to fetch user details from Clockify API', details: e.message})
     }
 });
+app.get('/get-time-entries/:workspaceId', async (req, res) => {
+    const { workspaceId } = req.params;
+    const apiKey = req.headers['x-api-key'];
+    const query = `SELECT clockifyUID FROM oncademy_apikey WHERE apikey = ?`;
+    db.query(query, [apiKey], async (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: 'Database query failed', details: err.message });
+        }
 
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'API key not found' });
+        }
+        const userId = results[0].clockifyUID;
+        try {
+            const response = await axios.get(`https://api.clockify.me/api/v1/workspaces/${workspaceId}/user/${userId}/time-entries`, {
+                headers: { 'x-api-key': apiKey }
+            });
+            res.json(response.data);
+        } catch (error) {
+            res.status(500).json({ error: 'Failed to fetch time entries from Clockify API', details: error.message });
+        }
+    })
+});
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
