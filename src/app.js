@@ -10,18 +10,22 @@ const axios = require('axios');
 app.use(bodyParser.json());
 app.use(cors());
 
-app.get('/get-api-key-by-user-id/:userID', (req, res) => {
+app.get('/api/get-api-key-by-user-id/:userID', (req, res) => {
     const userID = req.params.userID;
-    db.query('SELECT apikey FROM oncademy_apikey WHERE userID = ?', [userID], (err, results) => {
-        if(err) {
-            res.json(err)
-        } else {
-            res.json({ hasApiKey: results.length > 0, apikey: results[0] ? results[0].apikey : null });
-        }
-    });
+    try{
+        db.query('SELECT apikey FROM oncademy_apikey WHERE userID = ?', [userID], (err, results) => {
+            if(err) {
+                res.json(err)
+            } else {
+                res.json({ hasApiKey: results.length > 0, apikey: results[0] ? results[0].apikey : null });
+            }
+        });
+    } catch (e) {
+        res.json({error: 'Failed to get API key by user ID', details: e.message})
+    }
 });
 
-app.post('/save-api-key', async (req, res) => {
+app.post('/api/save-api-key', async (req, res) => {
     const { userID, apiKey } = req.body;
     // get user ID by https://api.clockify.me/api/v1/user with header x-api-key = apiKey
     try {
@@ -46,7 +50,7 @@ app.post('/save-api-key', async (req, res) => {
         res.json({error: 'Failed to fetch user details from Clockify API', details: e.message})
     }
 });
-app.get('/get-time-entries/:workspaceId', async (req, res) => {
+app.get('/api/get-time-entries/:workspaceId', async (req, res) => {
     const { workspaceId } = req.params;
     const apiKey = req.headers['x-api-key'];
     const query = `SELECT clockifyUID FROM oncademy_apikey WHERE apikey = ?`;
